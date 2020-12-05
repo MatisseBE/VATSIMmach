@@ -1,0 +1,324 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Linq;
+
+namespace Graphs
+{
+    class Maze
+    {
+        public int counter = 0;
+        public List<int>[] Values { get; set; }
+        public List<int>[] Nodes { get; set; }
+        public Maze(int n)
+        {
+            Values = new List<int>[n];
+            Nodes = new List<int>[n];
+            for (int i = 0; i < Values.Length; i++)
+            {
+                Values[i] = new List<int>();
+                Nodes[i] = new List<int>();
+            }
+        }
+        public int FindPosY(int node, int[,] matrix, int dimention)
+        {
+            int y;
+            if (node == 0)
+            {
+                y = 0;
+            }
+            else
+            {
+                y = node % dimention;
+            }
+            return y;
+        }
+        public int FindPosX(int node, int[,] matrix, int dimention)
+        {
+            int x;
+            if (node == 0)
+            {
+                x = 0;
+            }
+            else
+            {
+                if (node % dimention == 0)
+                {
+                    x = dimention - 1;
+                }
+                else
+                {
+                    double y2 = node / dimention;
+                    x = Convert.ToInt32(y2);
+
+                }
+
+
+            }
+            return x;
+        }
+
+        public void GetNeighbors(int node, int[,] matrix, int dimention, int[,] fnode)
+        {
+            while (node != (dimention*dimention))
+            {
+                int x = FindPosX(node, matrix, dimention);
+                int y = FindPosY(node, matrix, dimention);
+
+                for (int i = 0; i < 4; i++)
+                {
+                    if (i == 0)
+                    {
+                        y -= 1;
+                    }
+                    if (i == 1)
+                    {
+                        y += 2;   
+                    }
+                    if (i == 2)
+                    {
+                        y -= 1;
+                        x -= 1;
+                    }
+                    if (i == 3)
+                    {
+                        x += 2;
+                    }
+                    try
+                    {
+                        Values[node].Add(matrix[x,y]);
+                        Nodes[node].Add(Findnode(x,y,fnode));
+
+                    }  
+
+                    catch (Exception)
+                    {
+
+                        continue;
+                    }
+
+                }
+                    node++;
+
+        
+            }
+
+        }
+        public int FindMe(int start, int[,] matrix, int dimention)
+        {
+            int x = FindPosX(start, matrix, dimention);
+            int y = FindPosY(start, matrix, dimention);
+            int findme = matrix[x, y];
+            return findme;
+        }    
+        public int Findnode(int x,int y, int[,] fnode)
+        {
+            int findme = fnode[x, y];
+            return findme;
+        }    
+        
+        //public bool Checker(int[,] xmtarix, int[,] matrix, int[,] fnode, int node, int findme, int dimention)
+        //{
+        //    bool goodnieghborexist = false;
+        //    foreach (int neigh in Nodes[node]) // kijk voor elke buur 
+        //    {
+        //        foreach (var value in Values[neigh]) // value van buur
+        //        {
+        //            if (nodevalue == value) // zelfde value?
+        //            {
+        //                xmtarix[FindPosX(neigh, matrix, dimention), FindPosY(neigh, matrix, dimention)] = "X";
+        //                goodnieghborexist = true;
+        //            }
+        //        }
+        //    }
+        //}
+
+
+        public void Xifier(int[,] matrix, int[,] fnode, int node,int findme, int dimention)
+        {
+            string[,] xmtarix= new string[dimention, dimention];
+            for (int i = 0; i < dimention; i++)
+            {
+                for (int j = 0; j < dimention; j++)
+                {
+                    xmtarix[i, j] = matrix[i,j].ToString();
+                }
+            }
+
+
+
+            List<int> tryme = new List<int>();
+
+            int nodevalue = FindMe(node, matrix, dimention);
+
+            if (nodevalue == findme)
+            {
+                xmtarix[FindPosX(node, matrix, dimention), FindPosY(node, matrix, dimention)] = "X";
+            }
+            tryme.Add(node);
+            bool[] visited = new bool[Values.Length];
+
+            while (tryme.Count != 0)
+            {
+                node = tryme[0]; 
+                tryme.RemoveAt(0);
+
+                nodevalue = FindMe(node, matrix, dimention);
+
+                if (visited[node] == false)
+                {
+                    visited[node] = true; //start node heb je bezocht
+
+                    foreach (int neigh in Nodes[node]) // kijk voor elke buur 
+                    {
+                        foreach (var value in Values[neigh]) // value van buur
+                        {
+                            if (nodevalue == value) // zelfde value?
+                            {
+                                xmtarix[FindPosX(neigh, matrix, dimention), FindPosY(neigh, matrix, dimention)] = "X";
+                                tryme.Add(neigh);
+
+                            }
+                        }
+                    }
+                }
+                else continue;
+
+            }
+
+            for (int i = 0; i < dimention; i++)
+            {
+                for (int j = 0; j < dimention; j++)
+                {
+                    Console.Write(xmtarix[i, j]+ " ");
+                }
+                Console.WriteLine();
+            }
+
+        }
+ 
+        public void AddEdge(int node, int next)
+        {
+            Values[node].Add(next); //Voeg nummers aan een lijst toe bij elk nummerke van de array ===> Voeg bij elke node het getal in de lijst toe waaraan het linkt is
+            Values[next].Add(node); //Voeg nummers aan een lijst toe bij elk nummerke van de array ===> 2 ways
+        }
+        private bool Recursion(int node, bool[] visited)
+        {
+            Console.WriteLine("next->" + node);
+            if (node == 0) return true;
+
+            foreach (int next in Values[node])
+            {
+                if (!visited[next])
+                {
+                    visited[next] = true;
+                    return Recursion(next, visited);
+                }
+            }
+            return false;
+        }
+        public void Stack(int node)
+        {
+            bool[] visited = new bool[Values.Length];
+            Stack<int> stack = new Stack<int>();
+
+            visited[node] = true; // eerste node bezocht
+            stack.Push(node);
+
+            while (stack.Count != 0)
+            {
+                node = stack.Pop();
+                Console.WriteLine("next->" + node);
+
+                if (node == 0) return;
+
+                foreach (int next in Values[node])
+                {
+                    if (!visited[next])
+                    {
+                        visited[next] = true;
+                        stack.Push(next);
+                    }
+                }
+            }
+        }
+        public void DFS(int node)
+        {
+            Console.WriteLine("\nStart node: " + node);
+            Console.WriteLine("DFS - recursive method:");
+            bool[] visited = new bool[Values.Length];
+            visited[node] = true; //start node heb je bezocht
+            Recursion(node, visited);
+
+            Console.WriteLine("\nDFS - stack method:");
+            Stack(node);
+        }
+
+        public void BFS(int node)
+        {
+            Console.WriteLine("\nStart node: " + node);
+            Console.WriteLine("BFS - Queue method:");
+            bool[] visited = new bool[Values.Length];
+            visited[node] = true; //start node heb je bezocht
+
+            Queue<int> queue = new Queue<int>();
+
+            queue.Enqueue(node);
+
+            while (queue.Count != 0)
+            {
+                node = queue.Dequeue();
+                Console.WriteLine("next->" + node);
+
+                foreach (int next in Values[node])
+                {
+                    if (!visited[next])
+                    {
+                        visited[next] = true;
+                        if (next == 0) return;
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+        }
+
+
+        //public override string ToString()
+        //{
+        //    string s = "PRINT MAZE\n";
+        //    for (int i = 0; i < Values.Length; i++)
+        //    {
+        //        s += i + " --> ";
+        //        foreach (var item in Values[i])
+        //        {
+        //            s += item + " ";
+        //        }
+        //        s += "\n";
+        //    }
+        //    return s;
+        //}
+
+        public override string ToString()
+        {
+            string s = "PRINT MAZE\n";
+            for (int i = 0; i < Values.Length; i++)
+            {
+                s += i + " --> ";
+                
+                foreach (var item in Values[i])
+                {
+                    s += item + " ";
+                }
+                s +=" | ";
+                foreach (var item in Nodes[i])
+                {
+                    s += item + " ";
+                }
+                s += "\n";
+            }
+            return s;
+        }
+
+        
+    }
+}
