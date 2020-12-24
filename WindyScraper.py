@@ -8,6 +8,7 @@ import os.path
 from os import path
 import math
 import requests
+import haversine as hs
 
 
 
@@ -53,21 +54,13 @@ class windyWeather():
 
     def updateWeatherData(self):
         try:
-            if self.org == 'GFS' or self.org == 'gfs' or self.org == 'Gfs':
-                url = "https://node.windy.com/forecast/meteogram/gfs/4.123/51.456"
-                user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36'
-                headers = {'User-Agent': user_agent}
-                data = requests.get(url,headers=headers)
-                print(data.text)
-                data = urllib.request.urlopen('https://node.windy.com/forecast/meteogram/gfs/' + str(self.lat) +'/' + str(self.lon)).read()
-                print(data)
             if self.org == 'EC' or self.org == 'ec' or self.org == 'Ec':
                 data = urllib.request.urlopen('https://node.windy.com/forecast/meteogram/ecmwf/' + str(self.lat) +'/' + str(self.lon)).read()
             record = data.decode('UTF-8')
             data = json.loads(record)
             return data
         except:
-            return {'Wrong input parameter or Internet problem, please check'}
+            return {'Wrong input parameter or Internet problem, please check if weather source is EC'}
 
     def analyzeDetailT(self):
         JSON = self.JSON
@@ -285,34 +278,89 @@ class windyWeather():
     def getJSON(self):
         return self.JSON
 
+def Locations():
+    locations = {
+    "DVR"    :   [51.160,1.331],
+    "KOK"    :   [51.103,2.623],
+    "FERDI"  :   [50.877,3.591],
+    "BUB"    :   [50.888,4.516],
+    "TUTSO"  :   [50.506,5.207],
+    "LENDO"  :   [50.606,6.239],
+    "DIK"    :   [50.063,5.983],
+    "MTZ"    :   [49.339,6.299],
+    "POGOL"  :   [48.651,6.262],
+    "FAMEN"  :   [49.912,5.146],
+    "BELDI"  :   [50.032,2.931],
+    "COA"    :   [51.359,2.889],
+    "HELEN"  :   [51.197,3.758],
+    "EBAW"   :   [51.187,4.462],
+    "BROGY"  :   [51.164,5.469],
+    "EHRD"   :   [51.809,4.712],
+    "EDDL"   :   [51.255,6.684],
+    "FLEXS"  :   [49.790,6.973]
+}
+    return locations
+    
 def Update(newdate):
+
+    end_result = []
     a = windyWeather('ec',4.484,50.901)
     info = a.getInfo()
+
     datestring = newdate
-    time = a.getNumberOfData(newdate)
-    data = a.getCertainTimeVerticalWeather(time) # get data from our specific time
-    FL = [0,1,30,50,64,2,100,3,140,4,180,5,240,6,300,340,390,7]
-    print("Weather from the %s at %s o' clock:" % (datestring[:2],datestring[2:]))
-    jdata = {}
-    jdata["info"] = []
-    jdata["info"].append({
+    infodic = {
         "date" : info[3],
         "datestring" : datestring
+    }
+    end_result.append({
+        "info" : infodic
     })
-    for j in range(17):
-        out = "Geoheight = {:>4}   Temperature = {:<20} K    Humidity = {:<20}   Speed = {:<20} knots      Heading = {:<20} °".format(str(data[1][j]), str(data[2][j]), str(data[3][j]), str(data[4][j]), str(data[5][j]))
-        print(out)
-        jdata[FL[j]] = []
+    #print(end_result[0]["info"])
+    
+    locations = Locations()
+    #print("Locations",locations)
+    FL = [0,1,30,50,64,2,100,3,140,4,180,5,240,6,300,340,390]
 
-        jdata[FL[j]].append({
-            'T(K)' : str(data[2][j]),
-            'windspeed' : str(data[4][j]),
-            'windhdg': str(data[5][j])
+
+    for location in locations:
+        print("Weather from the %s at %s o' clock at location: %s" % (datestring[:2],datestring[2:],location))
+        location_data = []
+        a = windyWeather('ec',locations[location][1],locations[location][0])
+
+        time = a.getNumberOfData(newdate)
+        data = a.getCertainTimeVerticalWeather(time) # get data from our specific time
+        counter = 0
+        for flightlevel in FL:
+
+            # print(location, flightlevel)
+            out = "Geoheight = {:>4}   Temperature = {:<20} K    Humidity = {:<20}   Speed = {:<20} knots      Heading = {:<20} °".format(str(data[1][counter]), str(data[2][counter]), str(data[3][counter]), str(data[4][counter]), str(data[5][counter]))
+            print(out)
+            variables = {
+                'T(K)' : str(data[2][counter]),
+                'windspeed' : str(data[4][counter]),
+                'windhdg': str(data[5][counter])
+            }
+            counter += 1
+
+            location_data.append({
+                str(flightlevel) : variables
+            })
+                
+        end_result.append({
+            str(location): location_data
         })
+
+  
+
+
+
+
+
 
 
     with open('weather.json','w') as file:
-        json.dump(jdata,file)
+        json.dump(end_result,file)
+        file.close()
 
 def Updatetime(UTCTime):
     # round UTC to nearest next hour
@@ -346,13 +394,16 @@ def Timeinfo():
         try:   
             with open('weather.json','r') as file:
                 data = json.load(file)
-                windydate = str(data["info"][0]['date']).split("T")
-                windyhour = str(data["info"][0]['datestring'][2:])
+                windydate = str(data[0]["info"]["date"]).split("T")
+                #windydate = str(data["info"]['date']).split("T")
+                windyhour = str(data[0]["info"]["datestring"][2:])
                 hour = (windyhour, ":00:00")
                 hour = "".join(hour)
                 fullclock = (windydate[0],hour)
+                #print(fullclock)
                 WindyDateObj = "T".join(fullclock)
-
+                #print(WindyDateObj)
+                file.close()
             WindyDateObj = datetime.strptime(WindyDateObj, "%Y-%m-%dT%H:%M:%S")
             print("Last update was at:  ",WindyDateObj, "Z")
 
@@ -365,7 +416,7 @@ def Timeinfo():
 
 
             if WindyDateObj.date() != UTCTime.date(): # if day is different, just update (doesn't work well at our midnight but hey)
-                print("Different date.")
+                print("Different date. Updating regardless of time difference.")
                 Updatetime(UTCTime)
                 
             else:
@@ -378,37 +429,79 @@ def Timeinfo():
             print("Unable to get time info, json file empty? Anyway making a new one.'w'")
             MakeNew()
 
+def Closestlocation(lat,lon):
+    locations = Locations()
+    distances = [] #in kilometer
+    airplane = [lat,lon]
+    for key in locations:
+        #print(locations[key])
+        distance = hs.haversine(airplane,locations[key])
+        distances.append(distance)
+
+    # counter = 0
+    # for key in locations:
+    #     if distances[counter] < 50:
+    #         print(key,distances[counter])
+    #     counter += 1
+
+    shortestlength = min(distances)
+    index = distances.index(shortestlength)
+    #print("Smallestest",shortestlength)
+    #print("Position",index)
+
+    keys = list(locations.keys())
+    closteslocation = keys[index]
+    keyid = keys.index(closteslocation)
+    return closteslocation,keyid
+
+
+   
+
+
 
 
 def GetMach():
-    callsign = input("Callsign? \n").upper()
+    callsign = input("Callsign? \n\n").upper()
     print("--------------------------------------------")
 
     try:
-        page = requests.get("http://cluster.data.vatsim.net/vatsim-data.json")
+        #page = requests.get("http://cluster.data.vatsim.net/vatsim-data.json")
+        page = requests.get("https://data.vatsim.net/v3/vatsim-data.json")
         vatsim = page.json()
+        # timeupdate = vatsim["general"]["update_timestamp"]
+        # print(timeupdate)
+        # updatetimeobj = datetime.strptime(timeupdate, "%Y-%m-%dT%H:%M:%S")
+        # print(updatetimeobj.hour,updatetimeobj.minute,updatetimeobj.second)
         counter = 0
-        while vatsim["clients"][counter]["callsign"] != callsign:
+        while vatsim["pilots"][counter]["callsign"] != callsign:
             counter += 1
 
-        actualFL = vatsim["clients"][counter]["altitude"]
+        actualFL = vatsim["pilots"][counter]["altitude"]
         actualFL /= 100
-        possibleFL = [0,1,30,50,64,2,100,3,140,4,180,5,240,6,300,340,390,7]
+        possibleFL = [0,1,30,50,64,2,100,3,140,4,180,5,240,6,300,340,390]
         FL = min(possibleFL, key=lambda x:abs(x-actualFL))
-        gs = vatsim["clients"][counter]["groundspeed"]
-        hdg = vatsim["clients"][counter]["heading"]
-        print("FL %s/%s - H%s - N%s" % (FL,actualFL,hdg,gs))
+        FLid = possibleFL.index(FL)
+        gs = vatsim["pilots"][counter]["groundspeed"]
+        hdg = vatsim["pilots"][counter]["heading"]
 
+        lat = vatsim["pilots"][counter]["latitude"]
+        lon = vatsim["pilots"][counter]["longitude"]
+        #print("POSITION:",lat,',',lon)
+        locdata = Closestlocation(lat,lon)
+        location = locdata[0]
+        locid = locdata[1]
 
+        # print(location)
+        print("FL %s/%s - H%s - N%s near %s" % (FL,actualFL,hdg,gs,location))
 
         with open('weather.json','r') as file:
             data = json.load(file)
-            kelvin = float(data[str(FL)][0]['T(K)'])
-            print("Temperature:             ", kelvin)
+            kelvin = float(data[locid+1][location][FLid][str(FL)]['T(K)'])
+            #print("Temperature:             ", kelvin)
             LSS = 643.855*((kelvin/273.15)**0.5) #formula to calculate local speed of sound
 
-            windhdg = float(data[str(FL)][0]['windhdg'])
-            print("Wind heading:            ", windhdg)
+            windhdg = float(data[locid+1][location][FLid][str(FL)]['windhdg'])
+            #print("Wind heading:            ", windhdg)
             
 
             if hdg >= windhdg: #finds difference between wind and aircrafts heading
@@ -419,19 +512,26 @@ def GetMach():
             raddiff = (hdgdiff*math.pi)/180 #degrees to radians
             cos = math.cos(raddiff) 
 
-            windspeed = float(data[str(FL)][0]['windspeed'])
-            print("Wind speed               ", windspeed)
+            windspeed = float(data[locid+1][location][FLid][str(FL)]['windspeed'])
+            #print("Wind speed               ", windspeed)
             TrueAS = gs+(cos*windspeed)
+       
             mach = TrueAS/LSS
 
-            print("--------------------------------------------")
-            print("Local speed of sound:    ",LSS)
-            print("True Airspeed:           ",TrueAS)
+            IndicatedAS = TrueAS /  (1 + (actualFL/ 10) *0.0175)       #1.75% less TAS per 1000 altitude.Hey     
+
+            #print("--------------------------------------------")
+            #print("Local speed of sound:    ",LSS)
+            #print("True Airspeed:           ",TrueAS)
+            print("Indicated Airspeed:      ",IndicatedAS)
+        
             print("Calculated mach number:  ",mach)
+            file.close()
             GetMach()
 
 
-    except:
+    except IndexError as e:
+        print(e)
         print("Error, check callsign and try again")
         GetMach()
 
