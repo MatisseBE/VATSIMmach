@@ -17,6 +17,7 @@ class windyWeather():
         self.org = inputOrg
         self.lon = inputLon
         self.lat = inputLat
+        
         self.verticalInfo = []
         if self.org.upper() != 'EC' and self.org.upper() != 'GFS':
             print('Error: Organization should be \'EC\' or \'GFS\'')
@@ -303,18 +304,20 @@ def Locations():
     
 def Update(newdate):
 
-    end_result = []
+    end_result = {}
     a = windyWeather('ec',4.484,50.901)
     info = a.getInfo()
 
     datestring = newdate
-    infodic = {
-        "date" : info[3],
-        "datestring" : datestring
-    }
-    end_result.append({
-        "info" : infodic
-    })
+    end_result["info"] = {
+            "date" : info[3],
+            "datestring" : datestring
+        }
+    # end_result.append({
+    #     "info" : infodic
+    # })
+
+    end_result["data"] = {}
     #print(end_result[0]["info"])
     
     locations = Locations()
@@ -324,41 +327,30 @@ def Update(newdate):
 
     for location in locations:
         print("Weather from the %s at %s o' clock at location: %s" % (datestring[:2],datestring[2:],location))
-        location_data = []
+        location_data = {}
         a = windyWeather('ec',locations[location][1],locations[location][0])
 
         time = a.getNumberOfData(newdate)
+        #print(time)
         data = a.getCertainTimeVerticalWeather(time) # get data from our specific time
         counter = 0
         for flightlevel in FL:
 
-            # print(location, flightlevel)
+            #print(location, flightlevel)
             out = "Geoheight = {:>4}   Temperature = {:<20} K    Humidity = {:<20}   Speed = {:<20} knots      Heading = {:<20} °".format(str(data[1][counter]), str(data[2][counter]), str(data[3][counter]), str(data[4][counter]), str(data[5][counter]))
             print(out)
-            variables = {
+            location_data[str(flightlevel)] = {
                 'T(K)' : str(data[2][counter]),
                 'windspeed' : str(data[4][counter]),
                 'windhdg': str(data[5][counter])
             }
             counter += 1
-
-            location_data.append({
-                str(flightlevel) : variables
-            })
-                
-        end_result.append({
-            str(location): location_data
-        })
+            #print(location_data)
+        end_result["data"][str(location)] = location_data
 
   
 
-
-
-
-
-
-
-    with open('weather.json','w') as file:
+    with open("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json",'w') as file:
         json.dump(end_result,file)
         file.close()
 
@@ -372,7 +364,12 @@ def Updatetime(UTCTime):
     possiblehour = [1,4,7,10,13,16,19,22]
     nexthour = min(possiblehour, key=lambda x:abs(x-next))
     newtime = nexthour
-    day = UTCTime.day
+
+    if len(str(nexthour))==1:
+        nexthour = "0%d"%(nexthour) #make sure hour is always two digits
+
+    now = datetime.utcnow()
+    day = now.strftime("%d") #make sure date is always two digits
 
     newdate = "%s%s"% (day,newtime)
     print("New dayhour string is:", newdate, "Z")
@@ -387,16 +384,17 @@ def MakeNew():
 
 
 def Timeinfo():
-    if not path.exists("weather.json"):
+    if not path.exists("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json"):
         MakeNew()
         print("Weather.json not found: making new one.")
     else:
         try:   
-            with open('weather.json','r') as file:
+            with open("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json",'r') as file:
                 data = json.load(file)
-                windydate = str(data[0]["info"]["date"]).split("T")
+                #print(data)
+                windydate = str(data["info"]["date"]).split("T")
                 #windydate = str(data["info"]['date']).split("T")
-                windyhour = str(data[0]["info"]["datestring"][2:])
+                windyhour = str(data["info"]["datestring"][2:])
                 hour = (windyhour, ":00:00")
                 hour = "".join(hour)
                 fullclock = (windydate[0],hour)
@@ -407,13 +405,10 @@ def Timeinfo():
             WindyDateObj = datetime.strptime(WindyDateObj, "%Y-%m-%dT%H:%M:%S")
             print("Last update was at:  ",WindyDateObj, "Z")
 
-
             now = datetime.utcnow()
             date_time_str2 = now.strftime("%Y-%m-%d %H:%M:%S")
             UTCTime = datetime.strptime(date_time_str2, "%Y-%m-%d %H:%M:%S")
             print("Current time is:     ",UTCTime, "Z")
-
-
 
             if WindyDateObj.date() != UTCTime.date(): # if day is different, just update (doesn't work well at our midnight but hey)
                 print("Different date. Updating regardless of time difference.")
@@ -486,7 +481,7 @@ def GetMach():
 
         lat = vatsim["pilots"][counter]["latitude"]
         lon = vatsim["pilots"][counter]["longitude"]
-        #print("POSITION:",lat,',',lon)
+        print("POSITION:",lat,',',lon)
         locdata = Closestlocation(lat,lon)
         location = locdata[0]
         locid = locdata[1]
@@ -494,14 +489,15 @@ def GetMach():
         # print(location)
         print("FL %s/%s - H%s - N%s near %s" % (FL,actualFL,hdg,gs,location))
 
-        with open('weather.json','r') as file:
+        with open("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json",'r') as file:
             data = json.load(file)
-            kelvin = float(data[locid+1][location][FLid][str(FL)]['T(K)'])
-            #print("Temperature:             ", kelvin)
-            LSS = 643.855*((kelvin/273.15)**0.5) #formula to calculate local speed of sound
+            kelvin = float(data["data"][location][str(FL)]['T(K)'])
+            #kelvin = 215
+            print("Temperature:             ", kelvin-273)
+            LSS = 643.855*((kelvin/273.15)**0.5) #formula to calculate local speed of sound in KT
 
-            windhdg = float(data[locid+1][location][FLid][str(FL)]['windhdg'])
-            #print("Wind heading:            ", windhdg)
+            windhdg = float(data["data"][location][str(FL)]['windhdg'])
+            print("Wind heading:            ", windhdg)
             
 
             if hdg >= windhdg: #finds difference between wind and aircrafts heading
@@ -512,8 +508,8 @@ def GetMach():
             raddiff = (hdgdiff*math.pi)/180 #degrees to radians
             cos = math.cos(raddiff) 
 
-            windspeed = float(data[locid+1][location][FLid][str(FL)]['windspeed'])
-            #print("Wind speed               ", windspeed)
+            windspeed = float(data["data"][location][str(FL)]['windspeed'])
+            print("Wind speed               ", windspeed)
             TrueAS = gs+(cos*windspeed)
        
             mach = TrueAS/LSS
@@ -537,8 +533,6 @@ def GetMach():
 
 Timeinfo()
 GetMach()
-
-
 
 
 
