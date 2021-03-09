@@ -356,8 +356,8 @@ def Update(newdate):
 
 def Updatetime(UTCTime):
     # round UTC to nearest next hour
-    if UTCTime.hour < 24:
-        next = UTCTime.hour + 1
+    if UTCTime < 24:
+        next = UTCTime + 1
     else: 
         next = 1
     # find the nearest possible hour of UTC
@@ -380,7 +380,7 @@ def MakeNew():
     date_time_str2 = now.strftime("%Y-%m-%d %H:%M:%S")
     UTCTime = datetime.strptime(date_time_str2, "%Y-%m-%d %H:%M:%S")
     print("Current time is:     ",UTCTime, "Z")
-    Updatetime(UTCTime)
+    Updatetime(UTCTime.hour)
 
 
 def Timeinfo():
@@ -458,7 +458,15 @@ def Closestlocation(lat,lon):
 def GetMach():
     callsign = input("Callsign? \n\n").upper()
     print("--------------------------------------------")
-
+    if callsign == "FORCE NEW": #to get a the next weather update
+        print(datetime.utcnow().hour+2)
+        Updatetime(datetime.utcnow().hour+2)
+    if callsign == "FORCE OLD": #to revert back to current time
+        try: 
+            Updatetime(datetime.utcnow().hour-3)
+        except: 
+            print("This is not a time machine. Function can only be used to revert back to current time after using 'FORCE NEW'")
+            GetMach()
     try:
         #page = requests.get("http://cluster.data.vatsim.net/vatsim-data.json")
         page = requests.get("https://data.vatsim.net/v3/vatsim-data.json")
