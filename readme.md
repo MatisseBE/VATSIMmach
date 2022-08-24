@@ -15,16 +15,16 @@ TAS = GS + (cos(Δheading(aircraft and wind)) * wind speed)
 LSS = 643.855*((kelvin/273.15)**0.5)    [(knots)](https://www.weather.gov/media/epz/wxcalc/speedOfSound.pdf)
 
 ## Our implementation
-Step one: locations
+_Step one: locations_
 
 [We have one point for each of the entry points of our AOR.](https://webtools.kusternet.ch/geo/coordinatesconverter) Then, there are a few points scattered around the busiest parts of the airspace. **Keep the number of locatons to the bare minimum!** Our data comes from a reliable source, we don't want to bring our project to their attention.
 ![image](https://user-images.githubusercontent.com/51272243/186398340-4fdaa9d9-ca1f-426e-9515-83dab72e739a.png)
 
-Step two: API 
+_Step two: API_
 
 We have a server that executes the scripts and uplaods a weather file for the plugin to use. 
 
-Step three: plugin
+_Step three: plugin_
 
 Write a plugin that, for each aircraft, find the closest available data point. Then, find the nearest altitude for which you have data and perform your calcualtions as provided below. In our implementation, we only show the mach number for aircraft above FL245 (early enough to have conversion mach number) while IAS is always shown. 
 
@@ -42,4 +42,4 @@ I would say the margin of error here is roughly about 10KT or M0.02. Keep this i
 Oh, and Euroscopes ground speed is sometimes very cluncy, we prefer the Topsky one but we don't have the data it has (iirc it's the average from the last x-positions). So if your speed jumps all around, blame Euroscope.
 
 ## Hopes for the network
-With the new CoC now requiring pilots to use real world weather* it was time for me to realease this publicljy. I hope someone will pick up on this, improve it and provide a plugin for all users to enjoy. 
+With the new CoC now requiring pilots to use real world weather* it was time for me to realease this publicly. I hope someone will pick up on this, improve it and provide a plugin for all users to enjoy. 
