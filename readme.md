@@ -37,7 +37,7 @@ Write a plugin that, for each aircraft, find the closest available data point. T
 ## Limitations
 Different weather enginers for different simulators will inevitably result in different speeds, even if the only reason is the so called "resolution" of their data. Therefore, it's ONLY meant to be as a reference tool, not the hard truth. I will literally die inside if I hear someone tell a pilot he is doing 5 KT over the assigned speed. 
 
-I would say the margin of error here is roughly about 10KT or 0.02 M. Keep this in mind at all times. 
+I would say the margin of error here is roughly about 10KT or M0.02. Keep this in mind at all times. 
 
 Oh, and Euroscopes ground speed is sometimes very cluncy, we prefer the Topsky one but we don't have the data it has (iirc it's the average from the last x-positions). So if your speed jumps all around, blame Euroscope.
 
