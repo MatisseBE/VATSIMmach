@@ -16,7 +16,7 @@ LSS = 643.855*((kelvin/273.15)**0.5)    [(knots)](https://www.weather.gov/media/
 
 ## Our implementation
 Step one: locations
-We have one point for each of the entry points of our AOR. Then, there are a few points scattered around the busiest parts of the airspace. **Keep the number of locatons to the bare minimum!** Our data comes from a reliable source, we don't want to bring our project to their attention.
+[We have one point for each of the entry points of our AOR.](https://webtools.kusternet.ch/geo/coordinatesconverter) Then, there are a few points scattered around the busiest parts of the airspace. **Keep the number of locatons to the bare minimum!** Our data comes from a reliable source, we don't want to bring our project to their attention.
 ![image](https://user-images.githubusercontent.com/51272243/186398340-4fdaa9d9-ca1f-426e-9515-83dab72e739a.png)
 
 Step two: API 
