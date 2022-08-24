@@ -43,3 +43,5 @@ Oh, and Euroscopes ground speed is sometimes very cluncy, we prefer the Topsky o
 
 ## Hopes for the network
 With the new CoC now requiring pilots to use real world weather* it was time for me to realease this publicly. I hope someone will pick up on this, improve it and provide a plugin for all users to enjoy. 
+
+## [Data sourcing comes from there.](https://github.com/Louis-He/windyLib/blob/master/windyLib.py)
