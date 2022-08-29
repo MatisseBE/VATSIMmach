@@ -9,8 +9,9 @@ from os import path
 import math
 import requests
 import haversine as hs
-
-
+import sys
+import pytz
+import requests
 
 class windyWeather():
     def __init__(self, inputOrg, inputLon, inputLat):
@@ -56,9 +57,12 @@ class windyWeather():
     def updateWeatherData(self):
         try:
             if self.org == 'EC' or self.org == 'ec' or self.org == 'Ec':
-                data = urllib.request.urlopen('https://node.windy.com/forecast/meteogram/ecmwf/' + str(self.lat) +'/' + str(self.lon)).read()
-            record = data.decode('UTF-8')
-            data = json.loads(record)
+                url = "https://node.windy.com/forecast/meteogram/ecmwf/" + str(self.lat) +'/' + str(self.lon)
+                #print(url)
+                data = requests.get(url).text
+                #print(data)
+            #record = data.decode('UTF-8')
+            data = json.loads(data)
             return data
         except:
             return {'Wrong input parameter or Internet problem, please check if weather source is EC'}
@@ -274,6 +278,11 @@ class windyWeather():
 
     def getInfo(self):
         iodata = self.JSON
+        print(self.org)
+        print(self.lon)
+        print(self.lat)
+        print(iodata['header']['refTime'])
+        #print(iodata)
         return [self.org, self.lon, self.lat, iodata['header']['refTime']]
 
     def getJSON(self):
@@ -301,6 +310,27 @@ def Locations():
     "FLEXS"  :   [49.790,6.973]
 }
     return locations
+
+def Summer():
+    now = datetime.utcnow()
+    utc = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    zone = pytz.timezone('Europe/London')
+    london = datetime.now(zone)
+    london = london.strftime("%Y-%m-%d %H:%M:%S")
+
+    if utc == london:
+        SummerTime = False
+    else:
+        SummerTime = True
+
+    print("Summer Time is",SummerTime)
+    return SummerTime
+
+def Londontime():
+    zone = pytz.timezone('Europe/London')
+    london = datetime.now(zone)
+    return london
     
 def Update(newdate):
 
@@ -313,15 +343,10 @@ def Update(newdate):
             "date" : info[3],
             "datestring" : datestring
         }
-    # end_result.append({
-    #     "info" : infodic
-    # })
 
     end_result["data"] = {}
-    #print(end_result[0]["info"])
     
     locations = Locations()
-    #print("Locations",locations)
     FL = [0,1,30,50,64,2,100,3,140,4,180,5,240,6,300,340,390]
 
 
@@ -331,14 +356,14 @@ def Update(newdate):
         a = windyWeather('ec',locations[location][1],locations[location][0])
 
         time = a.getNumberOfData(newdate)
-        #print(time)
         data = a.getCertainTimeVerticalWeather(time) # get data from our specific time
         counter = 0
         for flightlevel in FL:
-
+            #print(data)
             #print(location, flightlevel)
-            out = "Geoheight = {:>4}   Temperature = {:<20} K    Humidity = {:<20}   Speed = {:<20} knots      Heading = {:<20} °".format(str(data[1][counter]), str(data[2][counter]), str(data[3][counter]), str(data[4][counter]), str(data[5][counter]))
-            print(out)
+            #out = "Geoheight = {:>4}   Temperature = {:<20} K    Humidity = {:<20}   Speed = {:<20} knots      Heading = {:<20} °".format(str(data[1][counter]), str(data[2][counter]), str(data[3][counter]), str(data[4][counter]), str(data[5][counter]))
+            #out = "Geoheight = %s   °" % (str(data[1][counter]))
+            #print(out)
             location_data[str(flightlevel)] = {
                 'T(K)' : str(data[2][counter]),
                 'windspeed' : str(data[4][counter]),
@@ -350,212 +375,54 @@ def Update(newdate):
 
   
 
-    with open("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json",'w') as file:
+    with open(weatherFile,'w') as file:
         json.dump(end_result,file)
         file.close()
 
-def Updatetime(UTCTime):
+def Updatetime(time,day):
     # round UTC to nearest next hour
-    if UTCTime < 24:
-        next = UTCTime + 1
+    if time < 23:
+        next = time + 1
     else: 
-        next = 1
+        if not SummerTime:
+            next = 1
+        else:
+            next = 23
+
     # find the nearest possible hour of UTC
-    possiblehour = [1,4,7,10,13,16,19,22]
+    if not SummerTime:
+        possiblehour = [1,4,7,10,13,16,19,22]
+    else:
+        possiblehour = [2,5,8,11,14,17,20,23]
     nexthour = min(possiblehour, key=lambda x:abs(x-next))
-    newtime = nexthour
 
     if len(str(nexthour))==1:
         nexthour = "0%d"%(nexthour) #make sure hour is always two digits
 
-    now = datetime.utcnow()
-    day = now.strftime("%d") #make sure date is always two digits
+    newtime = nexthour
 
     newdate = "%s%s"% (day,newtime)
-    print("New dayhour string is:", newdate, "Z")
+
+    print("New dayhour string is:", newdate)
     Update(newdate)
 
 def MakeNew():
-    now = datetime.utcnow()
-    date_time_str2 = now.strftime("%Y-%m-%d %H:%M:%S")
-    UTCTime = datetime.strptime(date_time_str2, "%Y-%m-%d %H:%M:%S")
-    print("Current time is:     ",UTCTime, "Z")
-    Updatetime(UTCTime.hour)
-
-
-def Timeinfo():
-    if not path.exists("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json"):
-        MakeNew()
-        print("Weather.json not found: making new one.")
-    else:
-        try:   
-            with open("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json",'r') as file:
-                data = json.load(file)
-                #print(data)
-                windydate = str(data["info"]["date"]).split("T")
-                #windydate = str(data["info"]['date']).split("T")
-                windyhour = str(data["info"]["datestring"][2:])
-                hour = (windyhour, ":00:00")
-                hour = "".join(hour)
-                fullclock = (windydate[0],hour)
-                #print(fullclock)
-                WindyDateObj = "T".join(fullclock)
-                #print(WindyDateObj)
-                file.close()
-            WindyDateObj = datetime.strptime(WindyDateObj, "%Y-%m-%dT%H:%M:%S")
-            print("Last update was at:  ",WindyDateObj, "Z")
-
-            now = datetime.utcnow()
-            date_time_str2 = now.strftime("%Y-%m-%d %H:%M:%S")
-            UTCTime = datetime.strptime(date_time_str2, "%Y-%m-%d %H:%M:%S")
-            print("Current time is:     ",UTCTime, "Z")
-
-            if WindyDateObj.date() != UTCTime.date(): # if day is different, just update (doesn't work well at our midnight but hey)
-                print("Different date. Updating regardless of time difference.")
-                Updatetime(UTCTime)
-                
-            else:
-                timediff = datetime.combine(date.min,WindyDateObj.time()) - datetime.combine(date.min,UTCTime.time())
-                if timediff != abs(timediff):
-                    q = input("Weather is outdated by %s. Json Is only updated if the file is outdated by more than 2 hours. Do you want to update (y/n) \n" % (abs(timediff)))
-                    if q.upper() == 'Y':
-                        Updatetime(UTCTime)                   
-        except:
-            print("Unable to get time info, json file empty? Anyway making a new one.'w'")
-            MakeNew()
-
-def Closestlocation(lat,lon):
-    locations = Locations()
-    distances = [] #in kilometer
-    airplane = [lat,lon]
-    for key in locations:
-        #print(locations[key])
-        distance = hs.haversine(airplane,locations[key])
-        distances.append(distance)
-
-    # counter = 0
-    # for key in locations:
-    #     if distances[counter] < 50:
-    #         print(key,distances[counter])
-    #     counter += 1
-
-    shortestlength = min(distances)
-    index = distances.index(shortestlength)
-    #print("Smallestest",shortestlength)
-    #print("Position",index)
-
-    keys = list(locations.keys())
-    closteslocation = keys[index]
-    keyid = keys.index(closteslocation)
-    return closteslocation,keyid
-
-
-   
-
-
-
-
-def GetMach():
-    callsign = input("Callsign? \n\n").upper()
-    print("--------------------------------------------")
-    if callsign == "FORCE NEW": #to get a the next weather update
-        print(datetime.utcnow().hour+2)
-        Updatetime(datetime.utcnow().hour+2)
-    if callsign == "FORCE OLD": #to revert back to current time
-        try: 
-            Updatetime(datetime.utcnow().hour-3)
-        except: 
-            print("This is not a time machine. Function can only be used to revert back to current time after using 'FORCE NEW'")
-            GetMach()
-    try:
-        #page = requests.get("http://cluster.data.vatsim.net/vatsim-data.json")
-        page = requests.get("https://data.vatsim.net/v3/vatsim-data.json")
-        vatsim = page.json()
-        # timeupdate = vatsim["general"]["update_timestamp"]
-        # print(timeupdate)
-        # updatetimeobj = datetime.strptime(timeupdate, "%Y-%m-%dT%H:%M:%S")
-        # print(updatetimeobj.hour,updatetimeobj.minute,updatetimeobj.second)
-        counter = 0
-        while vatsim["pilots"][counter]["callsign"] != callsign:
-            counter += 1
-
-        actualFL = vatsim["pilots"][counter]["altitude"]
-        actualFL /= 100
-        possibleFL = [0,1,30,50,64,2,100,3,140,4,180,5,240,6,300,340,390]
-        FL = min(possibleFL, key=lambda x:abs(x-actualFL))
-        FLid = possibleFL.index(FL)
-        gs = vatsim["pilots"][counter]["groundspeed"]
-        hdg = vatsim["pilots"][counter]["heading"]
-
-        lat = vatsim["pilots"][counter]["latitude"]
-        lon = vatsim["pilots"][counter]["longitude"]
-        print("POSITION:",lat,',',lon)
-        locdata = Closestlocation(lat,lon)
-        location = locdata[0]
-        locid = locdata[1]
-
-        # print(location)
-        print("FL %s/%s - H%s - N%s near %s" % (FL,actualFL,hdg,gs,location))
-
-        with open("C:/Users/matis/OneDrive/Documenten/Euroscope/Plugins/Belux/weather.json",'r') as file:
-            data = json.load(file)
-            kelvin = float(data["data"][location][str(FL)]['T(K)'])
-            #kelvin = 215
-            print("Temperature:             ", kelvin-273)
-            LSS = 643.855*((kelvin/273.15)**0.5) #formula to calculate local speed of sound in KT
-
-            windhdg = float(data["data"][location][str(FL)]['windhdg'])
-            print("Wind heading:            ", windhdg)
-            
-
-            if hdg >= windhdg: #finds difference between wind and aircrafts heading
-                hdgdiff = hdg-windhdg
-            else:
-                hdgdiff = windhdg - hdg
-
-            raddiff = (hdgdiff*math.pi)/180 #degrees to radians
-            cos = math.cos(raddiff) 
-
-            windspeed = float(data["data"][location][str(FL)]['windspeed'])
-            print("Wind speed               ", windspeed)
-            TrueAS = gs+(cos*windspeed)
-       
-            mach = TrueAS/LSS
-
-            IndicatedAS = TrueAS /  (1 + (actualFL/ 10) *0.0175)       #1.75% less TAS per 1000 altitude.Hey     
-
-            #print("--------------------------------------------")
-            #print("Local speed of sound:    ",LSS)
-            #print("True Airspeed:           ",TrueAS)
-            print("Indicated Airspeed:      ",IndicatedAS)
-        
-            print("Calculated mach number:  ",mach)
-            file.close()
-            GetMach()
-
-
-    except IndexError as e:
-        print(e)
-        print("Error, check callsign and try again")
-        GetMach()
-
-Timeinfo()
-GetMach()
+    time = int(UKtime.strftime("%H"))
+    day = UKtime.strftime("%d")
+    Updatetime(time,day)
 
 
 
 
 
+#Run script  
+global weatherFile 
+weatherFile = path.dirname(os.path.abspath(sys.argv[0])) + "/weather.json"
 
+global SummerTime
+SummerTime = Summer()
 
+global UKtime
+UKtime = Londontime()
 
-
-
-
-
-
-
-
-
-
-
+MakeNew()
