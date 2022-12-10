@@ -1,7 +1,8 @@
 # VATSIM mach
 
 #Update
-This reposito
+Wish granted! Plugin, code and more can now be found here:
+https://github.com/MorpheusXAUT/IASsure
 
 ## Introduction
 This repository has existed for many years but it has been privte for a long time. My vACC has used it as their foundation for their own Euroscope plugin, which has a feature that makes a rough calculation for VATSIM aircraft' mach number and indicated airspeed.
